@@ -1,0 +1,11 @@
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  root: '.',
+  base: './',
+  build: {
+    target: 'es2020',
+    outDir: 'dist',
+    emptyOutDir: true,
+  },
+});
