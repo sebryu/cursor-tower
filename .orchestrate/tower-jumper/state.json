@@ -104,13 +104,13 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": null,
-      "status": "pending",
+      "status": "pruned",
       "resultStatus": null,
       "handoffPath": null,
       "startedAt": null,
       "finishedAt": null,
-      "lastUpdate": null,
-      "note": null,
+      "lastUpdate": "2026-05-08T21:45:17.065Z",
+      "note": "pruned by operator via cli",
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
@@ -160,6 +160,10 @@
     {
       "at": "2026-05-08T21:45:16.133Z",
       "message": "procgen-scoring: pruned before spawn (operator)"
+    },
+    {
+      "at": "2026-05-08T21:45:17.064Z",
+      "message": "rendering-ui: pruned before spawn (operator)"
     }
   ]
 }
