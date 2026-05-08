@@ -79,7 +79,7 @@ function update(dtMs: number): void {
     audio.playJump();
   }
 
-  if (landedPlatform) {
+  if (landedPlatform && !wasGrounded) {
     score.add(10 + Math.max(0, Math.round((CONFIG.playerStartY - landedPlatform.y) / 30)));
     audio.playLand();
   }
