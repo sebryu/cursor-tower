@@ -81,13 +81,13 @@
       "agentId": null,
       "runId": null,
       "parentAgentId": null,
-      "status": "pending",
+      "status": "pruned",
       "resultStatus": null,
       "handoffPath": null,
       "startedAt": null,
       "finishedAt": null,
-      "lastUpdate": null,
-      "note": null,
+      "lastUpdate": "2026-05-08T21:45:16.133Z",
+      "note": "pruned by operator via cli",
       "slackTs": null,
       "prNumber": null,
       "failureMode": null,
@@ -156,6 +156,10 @@
     {
       "at": "2026-05-08T21:37:48.976Z",
       "message": "gameplay: spawn failed after 3 transient sub-attempts: l: [usage_limit_exceeded] Usage-based pricing required. Background Agent requires at least $2 remaining until your hard limit. Enable usage-based pricing and set a Spend Limit at https://www.cursor.co…"
+    },
+    {
+      "at": "2026-05-08T21:45:16.133Z",
+      "message": "procgen-scoring: pruned before spawn (operator)"
     }
   ]
 }
