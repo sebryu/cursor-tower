@@ -20,14 +20,21 @@ export function renderMenu(
 
   // Title with subtle bob.
   const bob = Math.sin(model.timeMs / 480) * 4;
-  ctx.fillStyle = THEME.accent;
-  ctx.font = '900 72px ui-rounded, "SF Pro Rounded", system-ui, sans-serif';
+  ctx.font = '900 64px ui-rounded, "SF Pro Rounded", system-ui, sans-serif';
   ctx.shadowColor = THEME.accent2;
   ctx.shadowBlur = 18;
-  ctx.fillText('SKY', width / 2 - 78, height * 0.28 + bob);
+  const titleY = height * 0.28 + bob;
+  const skyMetric = ctx.measureText('SKY ');
+  const climberMetric = ctx.measureText('CLIMBER');
+  const total = skyMetric.width + climberMetric.width;
+  const startX = width / 2 - total / 2;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = THEME.accent;
+  ctx.fillText('SKY ', startX, titleY);
   ctx.fillStyle = THEME.accent3;
-  ctx.fillText('CLIMBER', width / 2 + 60, height * 0.28 + bob);
+  ctx.fillText('CLIMBER', startX + skyMetric.width, titleY);
   ctx.shadowBlur = 0;
+  ctx.textAlign = 'center';
 
   ctx.fillStyle = THEME.textDim;
   ctx.font = '500 18px ui-sans-serif, system-ui, sans-serif';

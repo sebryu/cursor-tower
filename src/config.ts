@@ -52,8 +52,8 @@ export const CONFIG = {
   skipBonusBase: 60,
   combatHardLandSpeed: 1200,
 
-  cameraTopMargin: 360,
-  cameraSmoothing: 0.18,
+  cameraTopMargin: 600,
+  cameraSmoothing: 0.22,
   fallDeathMargin: 220,
 
   heightToScore: 0.18,
