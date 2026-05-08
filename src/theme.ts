@@ -1,0 +1,37 @@
+// Original "Neon Dusk" palette for Sky Climber. Avoid any direct callouts to
+// existing platformer titles; this is a fresh visual identity.
+export const THEME = {
+  name: 'neon-dusk',
+  bgTop: '#08081f',
+  bgHorizon: '#3c1d6c',
+  bgGroundBand: '#22103f',
+  cloudA: 'rgba(255, 196, 230, 0.18)',
+  cloudB: 'rgba(120, 196, 255, 0.16)',
+  star: 'rgba(255, 255, 255, 0.85)',
+  starDim: 'rgba(186, 230, 253, 0.5)',
+  panel: 'rgba(15, 16, 36, 0.78)',
+  panelBorder: 'rgba(186, 230, 253, 0.36)',
+  text: '#f8fafc',
+  textDim: 'rgba(248, 250, 252, 0.72)',
+  accent: '#facc15',
+  accent2: '#f472b6',
+  accent3: '#67e8f9',
+  comboBar: '#facc15',
+  comboBarTrack: 'rgba(248, 250, 252, 0.2)',
+  player: '#fde68a',
+  playerOutline: '#7c2d12',
+  playerShade: '#f59e0b',
+  platformNormal: '#5eead4',
+  platformNormalShade: '#0f766e',
+  platformSmall: '#fde68a',
+  platformSmallShade: '#b45309',
+  platformMoving: '#f0abfc',
+  platformMovingShade: '#7e22ce',
+  platformOutline: '#0f172a',
+  particleA: '#fde68a',
+  particleB: '#f0abfc',
+  particleC: '#67e8f9',
+  shadow: 'rgba(8, 8, 31, 0.55)',
+} as const;
+
+export type Theme = typeof THEME;

@@ -1,21 +1,33 @@
 import { createAudioManager } from './audio';
 import { createCamera } from './camera';
 import { CONFIG } from './config';
+import { createParticleSystem } from './effects';
 import { InputManager, type TouchButton } from './input';
 import { createGameLoop } from './loop';
 import { createPlatformsManager } from './platforms';
-import { createPlayer, resetPlayer, resolvePlayerPlatformCollision, updatePlayer } from './player';
+import {
+  createPlayer,
+  resetPlayer,
+  resolvePlayerPlatformCollision,
+  updatePlayer,
+} from './player';
 import { Renderer } from './render';
-import { createScoreTracker } from './scoring';
-import { GAME_STATES, getState, registerStateHooks, setState } from './state';
-import { hitTestTouchButton } from './ui/touch';
+import { createScoreTracker, pushPopup } from './scoring';
+import {
+  GAME_STATES,
+  getState,
+  registerStateHooks,
+  setState,
+  resetStateMachine,
+} from './state';
+import { hitTestTouchButton, type TouchControl } from './ui/touch';
+import { pointInMute } from './ui/common';
+import { getHintSeen, setHintSeen } from './storage';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game');
 const app = document.querySelector<HTMLElement>('#app');
 
-if (!canvas) {
-  throw new Error('Missing #game canvas.');
-}
+if (!canvas) throw new Error('Missing #game canvas.');
 
 const gameCanvas = canvas;
 const renderer = new Renderer(gameCanvas);
@@ -25,41 +37,79 @@ const platforms = createPlatformsManager();
 const camera = createCamera();
 const score = createScoreTracker();
 const audio = createAudioManager();
+const particles = createParticleSystem();
+
 const activeTouchButtons = new Map<number, TouchButton>();
+const activeTouchVisual = new Set<TouchControl>();
 
-let lastScoredHeight = 0;
+let isTouchDevice = matchMedia?.('(pointer: coarse)').matches ?? false;
+let showTouchControls = isTouchDevice;
+let lastPlatformIndexLanded = -1;
+let newBest = false;
+let hintAlpha = 0;
+let flash = 0;
 
-registerStateHooks(GAME_STATES.PLAYING, {
-  onEnter() {
-    lastScoredHeight = 0;
-  },
-});
+const HINT_TEXT = 'Move with arrow keys or A/D - hold jump for height';
+
+resetStateMachine(GAME_STATES.MENU);
 
 function startRun(): void {
+  audio.ensureContext();
   resetPlayer(player);
   platforms.reset();
   camera.reset();
   score.reset();
+  particles.reset();
+  lastPlatformIndexLanded = -1;
+  newBest = false;
+  hintAlpha = getHintSeen() ? 0 : 1;
+  flash = 0;
   audio.playMenuSelect();
   setState(GAME_STATES.PLAYING);
 }
 
+function endRun(): void {
+  const result = score.finalize();
+  newBest = result.newBest;
+  audio.playGameOver();
+  camera.addShake(0.7);
+  flash = 0.4;
+  setState(GAME_STATES.GAMEOVER);
+}
+
+registerStateHooks(GAME_STATES.PLAYING, {
+  onEnter() {
+    flash = 0;
+  },
+});
+
 function update(dtMs: number): void {
+  renderer.tick(dtMs);
+  flash = Math.max(0, flash - dtMs / 220);
+  hintAlpha = Math.max(0, hintAlpha - dtMs / 4500);
   const state = getState();
   const intents = input.getIntents();
 
-  if (state === GAME_STATES.MENU || state === GAME_STATES.GAMEOVER) {
+  if (state === GAME_STATES.MENU) {
     if (intents.jumpPressed) {
       startRun();
     }
+    if (intents.muteToggle) audio.toggleMuted();
     input.endFrame();
     return;
   }
 
   if (state === GAME_STATES.PAUSED) {
-    if (intents.pauseToggle) {
-      setState(GAME_STATES.PLAYING);
-    }
+    if (intents.pauseToggle) setState(GAME_STATES.PLAYING);
+    if (intents.muteToggle) audio.toggleMuted();
+    if (intents.restartPressed) startRun();
+    input.endFrame();
+    return;
+  }
+
+  if (state === GAME_STATES.GAMEOVER) {
+    if (intents.jumpPressed || intents.restartPressed) startRun();
+    if (intents.muteToggle) audio.toggleMuted();
     input.endFrame();
     return;
   }
@@ -70,28 +120,65 @@ function update(dtMs: number): void {
     return;
   }
 
-  const wasGrounded = player.grounded;
+  if (intents.muteToggle) audio.toggleMuted();
+  if (intents.restartPressed) {
+    startRun();
+    input.endFrame();
+    return;
+  }
+
   const previousY = player.y;
-  updatePlayer(player, intents, dtMs);
-  const landedPlatform = resolvePlayerPlatformCollision(player, platforms.platforms, previousY);
+  updatePlayer(player, intents, dtMs, {
+    onJump(p) {
+      audio.playJump();
+      particles.spawnPuff(p.x + p.width / 2, p.y + p.height + 4);
+      if (!getHintSeen()) {
+        setHintSeen();
+        hintAlpha = Math.max(hintAlpha - 0.05, 0);
+      }
+    },
+    onLand(p, platform, impactVy) {
+      const landedIndex = platforms.platforms.indexOf(platform);
+      const skips = lastPlatformIndexLanded < 0
+        ? 0
+        : Math.max(0, lastPlatformIndexLanded - landedIndex - 1);
+      const isHard = impactVy > CONFIG.combatHardLandSpeed;
 
-  if (wasGrounded && !player.grounded && intents.jumpPressed) {
-    audio.playJump();
-  }
+      if (isHard) {
+        camera.addShake(0.4);
+      }
 
-  if (landedPlatform && !wasGrounded) {
-    score.add(10 + Math.max(0, Math.round((CONFIG.playerStartY - landedPlatform.y) / 30)));
-    audio.playLand();
-  }
+      const result = score.registerLanding(skips, false);
+      audio.playLand(impactVy);
+      particles.spawnLandDust(p.x + p.width / 2, p.y + p.height, Math.min(1, impactVy / 1500));
 
-  camera.update(player.y);
-  platforms.update(camera);
-  scoreHeightProgress();
+      if (result.delta > 0) {
+        pushPopup(score, `+${result.delta}`, p.x + p.width / 2, p.y - 10);
+      }
+      if (result.comboBumped && result.combo >= 2) {
+        audio.playCombo(result.combo);
+        particles.spawnComboSparks(p.x + p.width / 2, p.y);
+        camera.addShake(Math.min(0.6, 0.18 + result.combo * 0.05));
+        if (result.combo >= 3) {
+          pushPopup(score, `COMBO x${score.multiplier.toFixed(1)}`, p.x + p.width / 2, p.y - 36, 1300);
+        }
+      }
+      if (landedIndex !== -1) lastPlatformIndexLanded = landedIndex;
+    },
+  });
+
+  resolvePlayerPlatformCollision(player, platforms.platforms, previousY, {
+    onLand: undefined,
+  });
+
+  camera.update(player.y, dtMs);
+  camera.tick(dtMs);
+  platforms.update(camera, dtMs);
+  score.registerHeight(Math.max(0, CONFIG.playerStartY - player.highestY));
   score.tick(dtMs);
 
-  if (camera.transform(player.y) > CONFIG.gameHeight + CONFIG.fallDeathMargin) {
-    audio.playGameOver();
-    setState(GAME_STATES.GAMEOVER);
+  if (player.y > camera.viewportBottomY() + CONFIG.fallDeathMargin) {
+    endRun();
   }
 
   input.endFrame();
@@ -105,50 +192,57 @@ function render(): void {
     camera,
     score,
     audio,
+    particles,
+    hudHint: hintAlpha > 0.01 ? HINT_TEXT : undefined,
+    hudHintAlpha: hintAlpha,
+    newBest,
+    showTouch: showTouchControls,
+    activeTouch: activeTouchVisual,
+    isTouch: isTouchDevice,
+    flash,
   });
 }
 
-function scoreHeightProgress(): void {
-  const height = Math.max(0, CONFIG.playerStartY - player.highestY);
-  const nextBand = Math.floor(height / 50);
-
-  if (nextBand > lastScoredHeight) {
-    score.add((nextBand - lastScoredHeight) * 5);
-    lastScoredHeight = nextBand;
+function activatePointerControls(point: { x: number; y: number }, pointerId: number): void {
+  if (pointInMute(CONFIG.gameWidth, point.x, point.y)) {
+    audio.toggleMuted();
+    return;
+  }
+  const button = hitTestTouchButton(CONFIG.gameWidth, CONFIG.gameHeight, point.x, point.y);
+  if (button) {
+    isTouchDevice = true;
+    showTouchControls = true;
+    input.setTouchButton(button, true);
+    activeTouchButtons.set(pointerId, button);
+    activeTouchVisual.add(button);
+  } else if (getState() === GAME_STATES.MENU || getState() === GAME_STATES.GAMEOVER) {
+    startRun();
+  } else if (getState() === GAME_STATES.PAUSED) {
+    setState(GAME_STATES.PLAYING);
   }
 }
 
 function handlePointerDown(event: PointerEvent): void {
   event.preventDefault();
+  audio.ensureContext();
+  if (event.pointerType === 'touch' || event.pointerType === 'pen') {
+    isTouchDevice = true;
+    showTouchControls = true;
+  }
   gameCanvas.setPointerCapture(event.pointerId);
-
-  const state = getState();
-  if (state === GAME_STATES.MENU || state === GAME_STATES.GAMEOVER) {
-    startRun();
-    return;
-  }
-
   const point = renderer.screenToGame(event.clientX, event.clientY);
-  if (!point) {
-    return;
-  }
-
-  const button = hitTestTouchButton(CONFIG.gameWidth, CONFIG.gameHeight, point.x, point.y);
-  if (button) {
-    input.setTouchButton(button, true);
-    activeTouchButtons.set(event.pointerId, button);
-  }
+  if (!point) return;
+  activatePointerControls(point, event.pointerId);
 }
 
 function handlePointerEnd(event: PointerEvent): void {
   event.preventDefault();
   const button = activeTouchButtons.get(event.pointerId);
-
   if (button) {
     input.setTouchButton(button, false);
     activeTouchButtons.delete(event.pointerId);
+    activeTouchVisual.delete(button);
   }
-
   if (gameCanvas.hasPointerCapture(event.pointerId)) {
     gameCanvas.releasePointerCapture(event.pointerId);
   }
@@ -157,7 +251,17 @@ function handlePointerEnd(event: PointerEvent): void {
 gameCanvas.addEventListener('pointerdown', handlePointerDown, { passive: false });
 gameCanvas.addEventListener('pointerup', handlePointerEnd, { passive: false });
 gameCanvas.addEventListener('pointercancel', handlePointerEnd, { passive: false });
+gameCanvas.addEventListener('contextmenu', (event) => event.preventDefault());
+
+document.addEventListener('keydown', (event) => {
+  if (event.code === 'KeyM') audio.toggleMuted();
+}, { passive: true });
 
 const loop = createGameLoop({ update, render });
 loop.start();
 app?.classList.add('ready');
+
+window.addEventListener('blur', () => {
+  if (getState() === GAME_STATES.PLAYING) setState(GAME_STATES.PAUSED);
+});
+

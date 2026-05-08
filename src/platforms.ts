@@ -1,5 +1,14 @@
 import { CONFIG } from './config';
 import type { Camera } from './camera';
+import {
+  difficultyAt,
+  isReachable,
+  mulberry32,
+  nextPlatform,
+  type PlatformKind,
+  type PlatformSpec,
+  type Rng,
+} from './procgen';
 
 export interface Platform {
   id: number;
@@ -7,94 +16,162 @@ export interface Platform {
   y: number;
   width: number;
   height: number;
+  kind: PlatformKind;
+  // Internal fields kept only for moving platforms so update() can oscillate.
+  moveOriginX: number;
+  moveRange: number;
+  moveSpeed: number;
+  movePhase: number;
+  // Used by the renderer to fade newly-spawned platforms in.
+  spawnAgeMs: number;
 }
 
 export interface PlatformsManager {
   platforms: Platform[];
-  reset: () => void;
-  update: (camera: Camera) => void;
-  render: (ctx: CanvasRenderingContext2D, camera: Camera) => void;
+  reset: (seed?: number) => void;
+  update: (camera: Camera, dtMs: number) => void;
+  highestPlatform: () => Platform | undefined;
+  height: () => number;
 }
+
+const CULL_BELOW_PX = CONFIG.gameHeight * 1.2;
 
 export function createPlatformsManager(): PlatformsManager {
-  const manager: PlatformsManager = {
-    platforms: [],
-    reset() {
-      manager.platforms = createStartingPlatforms();
-    },
-    update(camera) {
-      const lowestVisibleY = camera.y + CONFIG.gameHeight + 80;
-      manager.platforms = manager.platforms.filter((platform) => platform.y < lowestVisibleY);
-    },
-    render(ctx, camera) {
-      ctx.save();
-
-      for (const platform of manager.platforms) {
-        const screenY = camera.transform(platform.y);
-        ctx.fillStyle = '#67e8f9';
-        ctx.strokeStyle = '#cffafe';
-        ctx.lineWidth = 2;
-        roundRect(ctx, platform.x, screenY, platform.width, platform.height, 8);
-        ctx.fill();
-        ctx.stroke();
-      }
-
-      ctx.restore();
-    },
-  };
-
-  manager.reset();
-  return manager;
-}
-
-function createStartingPlatforms(): Platform[] {
+  let nextId = 0;
+  let rng: Rng = mulberry32(0);
+  let highestY: number = CONFIG.playerStartY;
   const platforms: Platform[] = [];
-  let y = CONFIG.playerStartY + CONFIG.playerHeight + 14;
 
-  for (let index = 0; index < CONFIG.startingPlatformCount; index += 1) {
-    const widthRange = CONFIG.platformMaxWidth - CONFIG.platformMinWidth;
-    const width = index === 0 ? CONFIG.platformMaxWidth : CONFIG.platformMinWidth + ((index * 37) % widthRange);
-    const playerCenterX = CONFIG.playerStartX + CONFIG.playerWidth / 2;
-    const x =
-      index === 0
-        ? clamp(playerCenterX - width / 2, 24, CONFIG.gameWidth - width - 24)
-        : 32 + ((index * 101) % Math.max(1, CONFIG.gameWidth - width - 64));
-
-    platforms.push({
-      id: index,
-      x,
-      y,
-      width,
+  function specToPlatform(spec: PlatformSpec): Platform {
+    return {
+      id: nextId++,
+      x: spec.kind === 'moving' ? spec.moveOriginX + spec.moveRange / 2 : spec.x,
+      y: spec.y,
+      width: spec.width,
       height: CONFIG.platformHeight,
-    });
-
-    y -= CONFIG.platformVerticalSpacingMin + ((index * 23) % 38);
+      kind: spec.kind,
+      moveOriginX: spec.moveOriginX,
+      moveRange: spec.moveRange,
+      moveSpeed: spec.moveSpeed,
+      movePhase: spec.movePhase,
+      spawnAgeMs: 0,
+    };
   }
 
-  return platforms;
-}
+  function topSpec(): PlatformSpec {
+    const top = platforms[platforms.length - 1];
+    if (!top) {
+      return {
+        x: 0,
+        y: CONFIG.playerStartY + CONFIG.playerHeight,
+        width: CONFIG.gameWidth,
+        kind: 'normal',
+        moveOriginX: 0,
+        moveRange: 0,
+        moveSpeed: 0,
+        movePhase: 0,
+      };
+    }
+    return {
+      x: top.x,
+      y: top.y,
+      width: top.width,
+      kind: top.kind,
+      moveOriginX: top.moveOriginX,
+      moveRange: top.moveRange,
+      moveSpeed: top.moveSpeed,
+      movePhase: top.movePhase,
+    };
+  }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
+  function spawnUntil(yLimit: number): void {
+    while (true) {
+      const top = platforms[platforms.length - 1];
+      if (top && top.y < yLimit) break;
+      const playerStart: number = CONFIG.playerStartY;
+      const height = Math.max(0, playerStart - (top?.y ?? playerStart));
+      let candidate = nextPlatform({
+        prev: topSpec(),
+        rng,
+        height,
+        screenWidth: CONFIG.gameWidth,
+      });
+      // Reachability fallback: try a few times to keep the next jump fair.
+      let attempts = 0;
+      while (!isReachable(topSpec(), candidate) && attempts < 6) {
+        candidate = nextPlatform({
+          prev: topSpec(),
+          rng,
+          height,
+          screenWidth: CONFIG.gameWidth,
+        });
+        attempts++;
+      }
+      const platform = specToPlatform(candidate);
+      platforms.push(platform);
+      highestY = Math.min(highestY, platform.y);
+    }
+  }
 
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-): void {
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.lineTo(x + width - radius, y);
-  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-  ctx.lineTo(x + width, y + height - radius);
-  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-  ctx.lineTo(x + radius, y + height);
-  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-  ctx.lineTo(x, y + radius);
-  ctx.quadraticCurveTo(x, y, x + radius, y);
-  ctx.closePath();
+  function reset(seed?: number): void {
+    rng = mulberry32(seed ?? Math.floor(Math.random() * 0xffffffff));
+    platforms.length = 0;
+    nextId = 0;
+    highestY = CONFIG.playerStartY as number;
+    // Place a guaranteed wide starting platform under the player.
+    platforms.push({
+      id: nextId++,
+      x: CONFIG.gameWidth / 2 - 110,
+      y: CONFIG.playerStartY + CONFIG.playerHeight + 8,
+      width: 220,
+      height: CONFIG.platformHeight,
+      kind: 'normal',
+      moveOriginX: 0,
+      moveRange: 0,
+      moveSpeed: 0,
+      movePhase: 0,
+      spawnAgeMs: 999,
+    });
+    // Build the first stack of platforms upward so the run starts populated.
+    spawnUntil(CONFIG.playerStartY - CONFIG.gameHeight);
+  }
+
+  function update(camera: Camera, dtMs: number): void {
+    const dt = dtMs / 1000;
+    for (const platform of platforms) {
+      platform.spawnAgeMs += dtMs;
+      if (platform.kind === 'moving' && platform.moveSpeed > 0) {
+        platform.movePhase += dt * (platform.moveSpeed / Math.max(1, platform.moveRange / 2));
+        const offset = Math.sin(platform.movePhase) * (platform.moveRange / 2);
+        platform.x = platform.moveOriginX + platform.moveRange / 2 + offset - platform.width / 2;
+      }
+    }
+    // Recycle platforms that fall well below the camera's bottom.
+    const cullBelow = camera.viewportBottomY() + CULL_BELOW_PX;
+    let i = 0;
+    while (i < platforms.length) {
+      if (platforms[i].y > cullBelow) {
+        platforms.splice(i, 1);
+      } else {
+        i++;
+      }
+    }
+    // Always keep platforms generated ~1.5 viewports above the camera top.
+    spawnUntil(camera.viewportTopY() - CONFIG.gameHeight * 1.5);
+    void difficultyAt;
+  }
+
+  return {
+    platforms,
+    reset,
+    update,
+    highestPlatform() {
+      return platforms.reduce<Platform | undefined>((best, platform) => {
+        return !best || platform.y < best.y ? platform : best;
+      }, undefined);
+    },
+    height() {
+      return Math.max(0, CONFIG.playerStartY - highestY);
+    },
+  };
 }
