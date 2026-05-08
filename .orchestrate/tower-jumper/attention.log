@@ -1,0 +1,8 @@
+[2026-05-08T21:12:52.453Z] scaffold: spawn failed after 3 transient sub-attempts: l: [invalid_model] Model 'gpt-5.5' does not match a known variant. Call GET /v1/models to list valid id+params combinations. run `bun cli.ts models --check` to re-probe the catalog against /v1/agents.
+[2026-05-08T21:13:59.317Z] scaffold: respawned by local-cli (was error)
+[2026-05-08T21:37:37.094Z] scaffold: verification self-reported (live-ui-verified)
+[2026-05-08T21:37:48.976Z] gameplay: spawn failed after 3 transient sub-attempts: l: [usage_limit_exceeded] Usage-based pricing required. Background Agent requires at least $2 remaining until your hard limit. Enable usage-based pricing and set a Spend Limit at https://www.cursor.co…
+[2026-05-08T21:45:16.133Z] procgen-scoring: pruned before spawn (operator)
+[2026-05-08T21:45:17.064Z] rendering-ui: pruned before spawn (operator)
+[2026-05-08T21:45:17.924Z] audio-polish: pruned before spawn (operator)
+[2026-05-08T21:45:18.843Z] verify-final: pruned before spawn (operator)

@@ -168,6 +168,10 @@
     {
       "at": "2026-05-08T21:45:17.924Z",
       "message": "audio-polish: pruned before spawn (operator)"
+    },
+    {
+      "at": "2026-05-08T21:45:18.843Z",
+      "message": "verify-final: pruned before spawn (operator)"
     }
   ]
 }
