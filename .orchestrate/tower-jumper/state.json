@@ -152,6 +152,10 @@
     {
       "at": "2026-05-08T21:37:37.094Z",
       "message": "scaffold: verification self-reported (live-ui-verified)"
+    },
+    {
+      "at": "2026-05-08T21:37:48.976Z",
+      "message": "gameplay: spawn failed after 3 transient sub-attempts: l: [usage_limit_exceeded] Usage-based pricing required. Background Agent requires at least $2 remaining until your hard limit. Enable usage-based pricing and set a Spend Limit at https://www.cursor.co…"
     }
   ]
 }
