@@ -1,0 +1,143 @@
+{
+  "rootSlug": "tower-jumper",
+  "tasks": [
+    {
+      "name": "scaffold",
+      "type": "worker",
+      "branch": "orch/tower-jumper/scaffold",
+      "startingRef": "main",
+      "dependsOn": [],
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": null,
+      "status": "running",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": "2026-05-08T21:12:43.982Z",
+      "finishedAt": null,
+      "lastUpdate": "2026-05-08T21:12:43.982Z",
+      "note": null,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null,
+      "attempts": 1
+    },
+    {
+      "name": "gameplay",
+      "type": "worker",
+      "branch": "orch/tower-jumper/gameplay",
+      "startingRef": "orch/tower-jumper/scaffold",
+      "dependsOn": [
+        "scaffold"
+      ],
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": null,
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": null,
+      "note": null,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null
+    },
+    {
+      "name": "procgen-scoring",
+      "type": "worker",
+      "branch": "orch/tower-jumper/procgen-scoring",
+      "startingRef": "orch/tower-jumper/gameplay",
+      "dependsOn": [
+        "gameplay"
+      ],
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": null,
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": null,
+      "note": null,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null
+    },
+    {
+      "name": "rendering-ui",
+      "type": "worker",
+      "branch": "orch/tower-jumper/rendering-ui",
+      "startingRef": "orch/tower-jumper/procgen-scoring",
+      "dependsOn": [
+        "procgen-scoring"
+      ],
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": null,
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": null,
+      "note": null,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null
+    },
+    {
+      "name": "audio-polish",
+      "type": "worker",
+      "branch": "orch/tower-jumper/audio-polish",
+      "startingRef": "orch/tower-jumper/rendering-ui",
+      "dependsOn": [
+        "rendering-ui"
+      ],
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": null,
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": null,
+      "note": null,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null
+    },
+    {
+      "name": "verify-final",
+      "type": "verifier",
+      "branch": "orch/tower-jumper/verify-final",
+      "startingRef": "orch/tower-jumper/audio-polish",
+      "dependsOn": [
+        "audio-polish"
+      ],
+      "agentId": null,
+      "runId": null,
+      "parentAgentId": null,
+      "status": "pending",
+      "resultStatus": null,
+      "handoffPath": null,
+      "startedAt": null,
+      "finishedAt": null,
+      "lastUpdate": null,
+      "note": null,
+      "slackTs": null,
+      "prNumber": null,
+      "failureMode": null,
+      "verification": null
+    }
+  ],
+  "attention": []
+}
