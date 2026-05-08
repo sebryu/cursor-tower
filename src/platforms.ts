@@ -53,8 +53,12 @@ function createStartingPlatforms(): Platform[] {
 
   for (let index = 0; index < CONFIG.startingPlatformCount; index += 1) {
     const widthRange = CONFIG.platformMaxWidth - CONFIG.platformMinWidth;
-    const width = CONFIG.platformMinWidth + ((index * 37) % widthRange);
-    const x = 32 + ((index * 101) % Math.max(1, CONFIG.gameWidth - width - 64));
+    const width = index === 0 ? CONFIG.platformMaxWidth : CONFIG.platformMinWidth + ((index * 37) % widthRange);
+    const playerCenterX = CONFIG.playerStartX + CONFIG.playerWidth / 2;
+    const x =
+      index === 0
+        ? clamp(playerCenterX - width / 2, 24, CONFIG.gameWidth - width - 24)
+        : 32 + ((index * 101) % Math.max(1, CONFIG.gameWidth - width - 64));
 
     platforms.push({
       id: index,
@@ -68,6 +72,10 @@ function createStartingPlatforms(): Platform[] {
   }
 
   return platforms;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
 }
 
 function roundRect(
