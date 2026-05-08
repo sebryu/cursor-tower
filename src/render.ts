@@ -98,13 +98,27 @@ export class Renderer {
           hint: scene.hudHint,
           hintAlpha: scene.hudHintAlpha,
         });
-        renderTouchControls(this.ctx, CONFIG.gameWidth, CONFIG.gameHeight, scene.activeTouch, scene.showTouch);
+        renderTouchControls(
+          this.ctx,
+          CONFIG.gameWidth,
+          CONFIG.gameHeight,
+          scene.activeTouch,
+          scene.showTouch,
+          scene.isTouch ? 1 : 0.45,
+        );
       } else if (scene.state === GAME_STATES.PAUSED) {
         renderHud(this.ctx, CONFIG.gameWidth, {
           score: scene.score,
           muted: scene.audio.isMuted(),
         });
-        renderTouchControls(this.ctx, CONFIG.gameWidth, CONFIG.gameHeight, scene.activeTouch, scene.showTouch);
+        renderTouchControls(
+          this.ctx,
+          CONFIG.gameWidth,
+          CONFIG.gameHeight,
+          scene.activeTouch,
+          scene.showTouch,
+          scene.isTouch ? 1 : 0.45,
+        );
         renderPause(this.ctx, CONFIG.gameWidth, CONFIG.gameHeight, { muted: scene.audio.isMuted() });
       } else if (scene.state === GAME_STATES.GAMEOVER) {
         renderGameOver(this.ctx, CONFIG.gameWidth, CONFIG.gameHeight, {

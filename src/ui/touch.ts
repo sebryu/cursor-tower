@@ -45,6 +45,7 @@ export function renderTouchControls(
   height: number,
   active: Set<TouchControl>,
   show: boolean,
+  baseAlpha: number = 1,
 ): void {
   if (!show) return;
   ctx.save();
@@ -52,14 +53,15 @@ export function renderTouchControls(
   ctx.textBaseline = 'middle';
   for (const button of getTouchButtons(width, height)) {
     const isActive = active.has(button.id);
+    ctx.globalAlpha = isActive ? 1 : baseAlpha;
     ctx.fillStyle = isActive ? 'rgba(250, 204, 21, 0.32)' : 'rgba(248, 250, 252, 0.12)';
-    ctx.strokeStyle = isActive ? THEME.accent : 'rgba(248, 250, 252, 0.42)';
+    ctx.strokeStyle = isActive ? THEME.accent : 'rgba(248, 250, 252, 0.5)';
     ctx.lineWidth = 2;
     roundRect(ctx, button.x, button.y, button.width, button.height, 18);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = isActive ? THEME.accent : 'rgba(248, 250, 252, 0.86)';
+    ctx.fillStyle = isActive ? THEME.accent : 'rgba(248, 250, 252, 0.92)';
     ctx.font =
       button.id === 'jump'
         ? '800 18px ui-sans-serif, system-ui, sans-serif'

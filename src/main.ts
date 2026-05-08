@@ -44,17 +44,18 @@ const activeTouchVisual = new Set<TouchControl>();
 
 function detectTouchPreferred(): boolean {
   const coarse = matchMedia?.('(pointer: coarse)').matches ?? false;
-  const narrow = window.innerWidth <= 720;
+  const narrow = window.innerWidth <= 820;
   const hasTouch = 'ontouchstart' in window || (navigator.maxTouchPoints ?? 0) > 0;
-  return coarse || (hasTouch && narrow) || narrow;
+  return coarse || hasTouch || narrow;
 }
 
 let isTouchDevice = detectTouchPreferred();
-let showTouchControls = isTouchDevice;
+// On-screen buttons are always visible during play; on desktop without touch
+// they sit at low opacity as a hint, on touch devices they go full opacity.
+let showTouchControls = true;
 window.addEventListener('resize', () => {
   if (detectTouchPreferred()) {
     isTouchDevice = true;
-    showTouchControls = true;
   }
 });
 let lastPlatformIndexLanded = -1;
