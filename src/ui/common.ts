@@ -68,7 +68,7 @@ export function drawMuteIcon(
 
   if (!muted) {
     ctx.strokeStyle = THEME.accent3;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.arc(8, 0, 6, -Math.PI / 3, Math.PI / 3);
     ctx.stroke();
@@ -76,25 +76,35 @@ export function drawMuteIcon(
     ctx.arc(8, 0, 11, -Math.PI / 4, Math.PI / 4);
     ctx.stroke();
   } else {
-    ctx.strokeStyle = THEME.accent2;
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#f43f5e';
+    ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.moveTo(8, -10);
-    ctx.lineTo(18, 10);
-    ctx.moveTo(18, -10);
-    ctx.lineTo(8, 10);
+    ctx.moveTo(8, -12);
+    ctx.lineTo(20, 12);
+    ctx.moveTo(20, -12);
+    ctx.lineTo(8, 12);
     ctx.stroke();
   }
+
+  ctx.fillStyle = muted ? '#f43f5e' : THEME.textDim;
+  ctx.font = '700 9px ui-sans-serif, system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(muted ? 'MUTED' : 'SOUND', 0, 30);
   ctx.restore();
 }
 
-export function muteHitBox(width: number): { x: number; y: number; r: number } {
-  return { x: width - 56, y: 28, r: 26 };
+export function muteHitBoxes(width: number): { x: number; y: number; r: number }[] {
+  return [
+    { x: width - 56, y: 28, r: 26 },
+    { x: width - 56, y: 96, r: 26 },
+  ];
 }
 
 export function pointInMute(width: number, x: number, y: number): boolean {
-  const { x: cx, y: cy, r } = muteHitBox(width);
-  const dx = x - cx;
-  const dy = y - cy;
-  return dx * dx + dy * dy <= r * r;
+  for (const box of muteHitBoxes(width)) {
+    const dx = x - box.x;
+    const dy = y - box.y;
+    if (dx * dx + dy * dy <= box.r * box.r) return true;
+  }
+  return false;
 }

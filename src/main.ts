@@ -42,8 +42,21 @@ const particles = createParticleSystem();
 const activeTouchButtons = new Map<number, TouchButton>();
 const activeTouchVisual = new Set<TouchControl>();
 
-let isTouchDevice = matchMedia?.('(pointer: coarse)').matches ?? false;
+function detectTouchPreferred(): boolean {
+  const coarse = matchMedia?.('(pointer: coarse)').matches ?? false;
+  const narrow = window.innerWidth <= 720;
+  const hasTouch = 'ontouchstart' in window || (navigator.maxTouchPoints ?? 0) > 0;
+  return coarse || (hasTouch && narrow) || narrow;
+}
+
+let isTouchDevice = detectTouchPreferred();
 let showTouchControls = isTouchDevice;
+window.addEventListener('resize', () => {
+  if (detectTouchPreferred()) {
+    isTouchDevice = true;
+    showTouchControls = true;
+  }
+});
 let lastPlatformIndexLanded = -1;
 let newBest = false;
 let hintAlpha = 0;
@@ -252,10 +265,6 @@ gameCanvas.addEventListener('pointerdown', handlePointerDown, { passive: false }
 gameCanvas.addEventListener('pointerup', handlePointerEnd, { passive: false });
 gameCanvas.addEventListener('pointercancel', handlePointerEnd, { passive: false });
 gameCanvas.addEventListener('contextmenu', (event) => event.preventDefault());
-
-document.addEventListener('keydown', (event) => {
-  if (event.code === 'KeyM') audio.toggleMuted();
-}, { passive: true });
 
 const loop = createGameLoop({ update, render });
 loop.start();
